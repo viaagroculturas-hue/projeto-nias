@@ -250,6 +250,9 @@ class ProxyHandler(http.server.SimpleHTTPRequestHandler):
         if self.path == '/api/ceasas':
             self._serve_ceasas()
             return
+        if self.path.startswith('/api/ceasa/prices') or self.path.startswith('/api/ceasa/precos'):
+            self._serve_ceasa_prices_api()
+            return
         if self.path.startswith('/api/dashboard/summary'):
             self._serve_dashboard_summary_api()
             return
@@ -338,6 +341,26 @@ class ProxyHandler(http.server.SimpleHTTPRequestHandler):
         self.send_header('Content-Type', 'application/json')
         self.end_headers()
         self.wfile.write(json.dumps(data, ensure_ascii=False).encode())
+
+    def _serve_ceasa_prices_api(self):
+        """Serve official/reference CEASA prices through CONAB/PROHORT and local cache."""
+        try:
+            from urllib.parse import urlparse, parse_qs
+            from flv.ceasa_prices_api import build_ceasa_price_payload, filter_payload
+            parsed = urlparse(self.path)
+            params = parse_qs(parsed.query)
+            force = params.get('refresh', ['0'])[0] in ('1', 'true', 'yes')
+            payload = build_ceasa_price_payload(base_dir=DIR, force_refresh=force)
+            payload = filter_payload(payload, params)
+            status = 200
+        except Exception as e:
+            payload = {'ok': False, 'error': str(e), 'records': [], 'meta': {'total_records': 0}}
+            status = 500
+        self.send_response(status)
+        self._cors()
+        self.send_header('Content-Type', 'application/json')
+        self.end_headers()
+        self.wfile.write(json.dumps(payload, ensure_ascii=False).encode())
 
     def _serve_ceasas(self):
         """Serve consolidated CEASA data from all states"""

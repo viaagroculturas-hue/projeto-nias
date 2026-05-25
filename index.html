@@ -1461,6 +1461,33 @@ tr:hover td{background:rgba(0,212,255,.04);}
         </div>
       </div>
 
+      <div style="display:flex;gap:8px;align-items:center;padding:7px 10px;background:rgba(0,255,136,.035);border-bottom:1px solid var(--border);flex-shrink:0;">
+        <div style="font-size:9px;color:var(--accent2);letter-spacing:1px;font-weight:bold;">CEASA/PROHORT OFICIAL</div>
+        <select id="ceasa-price-uf" onchange="loadCeasaOfficialPrices()" style="background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:var(--font);font-size:10px;padding:4px 7px;border-radius:3px;">
+          <option value="">Brasil</option><option value="AC">AC</option><option value="AL">AL</option><option value="AP">AP</option><option value="AM">AM</option><option value="BA">BA</option><option value="CE">CE</option><option value="DF">DF</option><option value="ES">ES</option><option value="GO">GO</option><option value="MA">MA</option><option value="MT">MT</option><option value="MS">MS</option><option value="MG">MG</option><option value="PA">PA</option><option value="PB">PB</option><option value="PR">PR</option><option value="PE">PE</option><option value="PI">PI</option><option value="RJ">RJ</option><option value="RN">RN</option><option value="RS">RS</option><option value="RO">RO</option><option value="RR">RR</option><option value="SC">SC</option><option value="SP">SP</option><option value="SE">SE</option><option value="TO">TO</option>
+        </select>
+        <input id="ceasa-price-product" onkeydown="if(event.key==='Enter')loadCeasaOfficialPrices()" placeholder="produto: tomate, banana, batata..." style="width:230px;background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:var(--font);font-size:10px;padding:4px 8px;border-radius:3px;outline:none;">
+        <button onclick="loadCeasaOfficialPrices(true)" style="background:rgba(0,255,136,.12);border:1px solid var(--accent2);color:var(--accent2);font-family:var(--font);font-size:10px;padding:4px 8px;border-radius:3px;cursor:pointer;">ATUALIZAR CEASA</button>
+        <span id="ceasa-official-status" style="font-size:9px;color:var(--text2);">aguardando coleta</span>
+      </div>
+      <div id="ceasa-official-panel" style="display:flex;min-height:120px;max-height:210px;border-bottom:1px solid var(--border);background:rgba(0,0,0,.18);flex-shrink:0;overflow:hidden;">
+        <div style="width:270px;border-right:1px solid var(--border);padding:8px 10px;overflow:auto;font-size:9px;color:var(--text2);line-height:1.45;" id="ceasa-official-coverage">
+          A API exibe apenas preços coletados de fonte oficial/referencial. Estados sem retorno ficam marcados como “sem dado”, sem preço inventado.
+        </div>
+        <div style="flex:1;overflow:auto;">
+          <table style="width:100%;border-collapse:collapse;table-layout:fixed;">
+            <thead><tr>
+              <th style="width:8%;background:var(--bg3);color:var(--accent2);font-size:8px;padding:5px;text-align:left;position:sticky;top:0;">UF</th>
+              <th style="width:20%;background:var(--bg3);color:var(--accent2);font-size:8px;padding:5px;text-align:left;position:sticky;top:0;">CEASA</th>
+              <th style="width:25%;background:var(--bg3);color:var(--accent2);font-size:8px;padding:5px;text-align:left;position:sticky;top:0;">PRODUTO</th>
+              <th style="width:14%;background:var(--bg3);color:var(--accent2);font-size:8px;padding:5px;text-align:right;position:sticky;top:0;">PREÇO</th>
+              <th style="width:13%;background:var(--bg3);color:var(--accent2);font-size:8px;padding:5px;text-align:left;position:sticky;top:0;">DATA</th>
+              <th style="width:20%;background:var(--bg3);color:var(--accent2);font-size:8px;padding:5px;text-align:left;position:sticky;top:0;">FONTE</th>
+            </tr></thead>
+            <tbody id="ceasa-official-tbody"><tr><td colspan="6" style="padding:14px;color:var(--text2);font-size:10px;text-align:center;">Clique em ATUALIZAR CEASA para coletar os preços reais disponíveis.</td></tr></tbody>
+          </table>
+        </div>
+      </div>
       <div style="display:flex;gap:8px;align-items:center;padding:7px 10px;background:rgba(0,212,255,.045);border-bottom:1px solid var(--border);flex-shrink:0;">
         <select id="mercado-filter-categoria" onchange="renderMercadoReal()" style="background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:var(--font);font-size:10px;padding:4px 7px;border-radius:3px;">
           <option value="all">Todas as categorias</option>
@@ -1475,6 +1502,7 @@ tr:hover td{background:rgba(0,212,255,.04);}
           <option value="IBGE PAM">IBGE PAM</option>
           <option value="CEAGESP">CEAGESP</option>
           <option value="CEPEA">CEPEA</option>
+          <option value="PROHORT">CONAB/PROHORT</option>
           <option value="CNA">CNA</option>
         </select>
         <input id="mercado-search" oninput="renderMercadoReal()" placeholder="buscar produto, fonte, região..." style="flex:1;background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:var(--font);font-size:10px;padding:4px 8px;border-radius:3px;outline:none;">
@@ -10806,6 +10834,67 @@ function _updateHortiPrices(cepeaPrices, conabData, ceagespData) {
 
 
 
+
+// ═══ CEASA/PROHORT OFICIAL — preços reais, sem simulação ═══
+let CEASA_OFFICIAL_DATA = null;
+async function loadCeasaOfficialPrices(force=false) {
+  const status = document.getElementById('ceasa-official-status');
+  const tbody = document.getElementById('ceasa-official-tbody');
+  const coverage = document.getElementById('ceasa-official-coverage');
+  if (status) status.textContent = 'coletando fonte oficial...';
+  if (tbody) tbody.innerHTML = '<tr><td colspan="6" style="padding:14px;color:var(--text2);font-size:10px;text-align:center;">Coletando CONAB/PROHORT e cache local...</td></tr>';
+  try {
+    const uf = document.getElementById('ceasa-price-uf')?.value || '';
+    const product = document.getElementById('ceasa-price-product')?.value || '';
+    const qs = new URLSearchParams();
+    if (uf) qs.set('uf', uf);
+    if (product) qs.set('product', product);
+    qs.set('limit', '300');
+    if (force) qs.set('refresh', '1');
+    const res = await fetch('/api/ceasa/prices?' + qs.toString());
+    const data = await res.json();
+    CEASA_OFFICIAL_DATA = data;
+    renderCeasaOfficialPrices(data);
+  } catch (e) {
+    if (status) status.textContent = 'erro na coleta CEASA';
+    if (tbody) tbody.innerHTML = `<tr><td colspan="6" style="padding:14px;color:var(--danger);font-size:10px;text-align:center;">Falha: ${escapeHtml(String(e.message || e))}</td></tr>`;
+  }
+}
+
+function renderCeasaOfficialPrices(data) {
+  const status = document.getElementById('ceasa-official-status');
+  const tbody = document.getElementById('ceasa-official-tbody');
+  const coverage = document.getElementById('ceasa-official-coverage');
+  const records = Array.isArray(data?.records) ? data.records : [];
+  const meta = data?.meta || {};
+  if (status) status.textContent = data?.ok ? `● ${records.length} preços · ${meta.states_with_prices || 0}/${meta.states_total || 27} UFs` : 'sem retorno oficial';
+  if (coverage) {
+    const cov = data?.coverage || {};
+    const okUfs = Object.values(cov).filter(x => x.records > 0).slice(0, 12).map(x => `${x.uf}:${x.records}`).join(' · ');
+    const pend = Object.values(cov).filter(x => !x.records).slice(0, 12).map(x => x.uf).join(', ');
+    coverage.innerHTML = `
+      <div style="color:var(--accent2);font-size:10px;letter-spacing:1px;margin-bottom:5px;">COBERTURA CEASA/PROHORT</div>
+      <div><strong>${meta.states_with_prices || 0}</strong> UFs com preço coletado de <strong>${meta.states_total || 27}</strong>.</div>
+      <div style="margin-top:5px;color:var(--text);">Com dados: ${escapeHtml(okUfs || 'nenhuma UF retornou preço')}</div>
+      <div style="margin-top:5px;color:var(--warn);">Sem retorno no coletor: ${escapeHtml(pend || '—')}</div>
+      <div style="margin-top:7px;color:var(--text2);">Política: preço só aparece quando existe fonte; o NIAS não cria cotação estimada.</div>`;
+  }
+  if (!tbody) return;
+  if (!records.length) {
+    tbody.innerHTML = '<tr><td colspan="6" style="padding:14px;color:var(--text2);font-size:10px;text-align:center;">Nenhum preço oficial retornado para o filtro atual. Tente Brasil ou outro produto.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = records.slice(0, 300).map(r => `
+    <tr title="${escapeHtml(r.quality || '')}">
+      <td style="padding:5px;border-bottom:1px solid var(--border);font-size:9px;color:var(--accent2);font-weight:bold;">${escapeHtml(r.uf || '—')}</td>
+      <td style="padding:5px;border-bottom:1px solid var(--border);font-size:9px;color:var(--text);">${escapeHtml(r.ceasa || '—')}</td>
+      <td style="padding:5px;border-bottom:1px solid var(--border);font-size:9px;color:var(--text);font-weight:bold;">${escapeHtml(r.product || '—')}</td>
+      <td style="padding:5px;border-bottom:1px solid var(--border);font-size:9px;color:var(--warn);text-align:right;font-family:var(--font);">R$ ${Number(r.price || 0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}<br><span style="font-size:8px;color:var(--text2);">${escapeHtml(r.unit || '')}</span></td>
+      <td style="padding:5px;border-bottom:1px solid var(--border);font-size:9px;color:var(--text2);">${escapeHtml(r.date || '—')}</td>
+      <td style="padding:5px;border-bottom:1px solid var(--border);font-size:8px;color:var(--text2);">${escapeHtml(r.source || '—')}<br><span style="color:${r.quality === 'official_collected' ? 'var(--accent2)' : 'var(--warn)'};">${r.quality === 'official_collected' ? 'OFICIAL' : 'CACHE/VALIDAR'}</span></td>
+    </tr>`).join('');
+}
+
 // ═══ MERCADO REAL — sem random, sem simulação ═══
 const MERCADO_REAL_DATA = {
   updated_at: '2026-05-24',
@@ -10896,7 +10985,7 @@ function exportMercadoCSV() {
   URL.revokeObjectURL(a.href);
 }
 
-function initMercadoReal() { window._ofertaInit = true; renderMercadoReal(); }
+function initMercadoReal() { window._ofertaInit = true; renderMercadoReal(); loadCeasaOfficialPrices(false); }
 window.initOferta = initMercadoReal;
 window.initCeasaTerminal = function(){ renderMercadoReal(); };
 // Auto-start API loading after login
