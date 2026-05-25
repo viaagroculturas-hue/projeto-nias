@@ -1,8 +1,25 @@
 """FLV Database Layer — SQLite WAL mode, thread-safe."""
 import sqlite3, os, json, time
 
-DB_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'nia_flv.db')
-SCHEMA_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'flv_schema.sql')
+ROOT_PATH = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# Prefer the populated production database under /data. Older builds left empty
+# nia_flv.db files in the root and inside /flv, which caused HTTP 500 in IA/Audit.
+def _select_db_path():
+    candidates = [
+        os.environ.get('NIAS_DB_PATH'),
+        os.path.join(ROOT_PATH, 'data', 'nia_flv.db'),
+        os.path.join(ROOT_PATH, 'nia_flv.db'),
+        os.path.join(ROOT_PATH, 'flv', 'nia_flv.db'),
+    ]
+    for cand in candidates:
+        if cand and os.path.exists(cand) and os.path.getsize(cand) > 8192:
+            return cand
+    return os.path.join(ROOT_PATH, 'data', 'nia_flv.db')
+
+DB_PATH = _select_db_path()
+SCHEMA_PATH = os.path.join(ROOT_PATH, 'data', 'flv_schema.sql')
+if not os.path.exists(SCHEMA_PATH):
+    SCHEMA_PATH = os.path.join(ROOT_PATH, 'flv_schema.sql')
 
 _conn_cache = {}
 
