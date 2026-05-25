@@ -791,22 +791,22 @@ tr:hover td{background:rgba(0,212,255,.04);}
 
       <!-- WEATHER ROW -->
       <div class="weather-row">
-        <div class="wx-card"><div class="wx-region">MATOPIBA (BA/PI/TO)</div><div class="wx-vals"><span class="wx-temp" id="wx-t1">36.2°C</span><span class="wx-hum" id="wx-h1">Umid: 18%</span><span class="wx-wind" id="wx-w1">Vento: 14km/h</span></div><div class="wx-status" id="wx-s1" style="color:var(--danger)">⚠ SECO / ESTRESSE</div></div>
-        <div class="wx-card"><div class="wx-region">CERRADO (MT/GO)</div><div class="wx-vals"><span class="wx-temp" id="wx-t2">33.8°C</span><span class="wx-hum" id="wx-h2">Umid: 31%</span><span class="wx-wind" id="wx-w2">Vento: 9km/h</span></div><div class="wx-status" id="wx-s2" style="color:var(--warn)">↓ UMIDADE EM DECLÍNIO</div></div>
-        <div class="wx-card"><div class="wx-region">NORTE PR / SUL MS</div><div class="wx-vals"><span class="wx-temp" id="wx-t3">28.4°C</span><span class="wx-hum" id="wx-h3">Umid: 68%</span><span class="wx-wind" id="wx-w3">Vento: 11km/h</span></div><div class="wx-status" id="wx-s3" style="color:var(--warn)">⚠ COND. P/ DOENÇA</div></div>
-        <div class="wx-card"><div class="wx-region">CIN. VERDE SP/PR</div><div class="wx-vals"><span class="wx-temp" id="wx-t4">30.1°C</span><span class="wx-hum" id="wx-h4">Umid: 52%</span><span class="wx-wind" id="wx-w4">Vento: 7km/h</span></div><div class="wx-status" id="wx-s4" style="color:var(--warn)">+2.1°C ANOMALIA TÉRMICA</div></div>
-        <div class="wx-card"><div class="wx-region">PAMPA (RS/AR/UY)</div><div class="wx-vals"><span class="wx-temp" id="wx-t5">22.7°C</span><span class="wx-hum" id="wx-h5">Umid: 61%</span><span class="wx-wind" id="wx-w5">Vento: 18km/h</span></div><div class="wx-status" id="wx-s5" style="color:var(--accent2)">✓ CONDIÇÕES NORMAIS</div></div>
-        <div class="wx-card"><div class="wx-region">AMAZÔNIA / RONDÔNIA</div><div class="wx-vals"><span class="wx-temp" id="wx-t6">31.5°C</span><span class="wx-hum" id="wx-h6">Umid: 84%</span><span class="wx-wind" id="wx-w6">Vento: 5km/h</span></div><div class="wx-status" id="wx-s6" style="color:var(--accent)">SAR ATIVO (NUVENS)</div></div>
+        <div class="wx-card"><div class="wx-region">MATOPIBA (BA/PI/TO)</div><div class="wx-vals"><span class="wx-temp" id="wx-t1">—</span><span class="wx-hum" id="wx-h1">Umid: —</span><span class="wx-wind" id="wx-w1">Vento: —</span></div><div class="wx-status" id="wx-s1" style="color:var(--danger)">aguardando API</div></div>
+        <div class="wx-card"><div class="wx-region">CERRADO (MT/GO)</div><div class="wx-vals"><span class="wx-temp" id="wx-t2">—</span><span class="wx-hum" id="wx-h2">Umid: —</span><span class="wx-wind" id="wx-w2">Vento: —</span></div><div class="wx-status" id="wx-s2" style="color:var(--warn)">aguardando API</div></div>
+        <div class="wx-card"><div class="wx-region">NORTE PR / SUL MS</div><div class="wx-vals"><span class="wx-temp" id="wx-t3">—</span><span class="wx-hum" id="wx-h3">Umid: —</span><span class="wx-wind" id="wx-w3">Vento: —</span></div><div class="wx-status" id="wx-s3" style="color:var(--warn)">aguardando API</div></div>
+        <div class="wx-card"><div class="wx-region">CIN. VERDE SP/PR</div><div class="wx-vals"><span class="wx-temp" id="wx-t4">—</span><span class="wx-hum" id="wx-h4">Umid: —</span><span class="wx-wind" id="wx-w4">Vento: —</span></div><div class="wx-status" id="wx-s4" style="color:var(--warn)">aguardando API</div></div>
+        <div class="wx-card"><div class="wx-region">PAMPA (RS/AR/UY)</div><div class="wx-vals"><span class="wx-temp" id="wx-t5">—</span><span class="wx-hum" id="wx-h5">Umid: —</span><span class="wx-wind" id="wx-w5">Vento: —</span></div><div class="wx-status" id="wx-s5" style="color:var(--accent2)">aguardando API</div></div>
+        <div class="wx-card"><div class="wx-region">AMAZÔNIA / RONDÔNIA</div><div class="wx-vals"><span class="wx-temp" id="wx-t6">—</span><span class="wx-hum" id="wx-h6">Umid: —</span><span class="wx-wind" id="wx-w6">Vento: —</span></div><div class="wx-status" id="wx-s6" style="color:var(--accent)">aguardando API</div></div>
       </div>
 
       <!-- KPI ROW -->
       <div class="kpi-row">
-        <div class="kpi-card"><div class="kpi-label">SOJA BR 2025/26</div><div class="kpi-value" id="kpi-soja">147.2 <span style="font-size:13px">Mt</span></div><div class="kpi-delta down" id="kd-soja">▼ -3.2% vs safra anterior</div><canvas class="kpi-spark" id="sp-soja"></canvas></div>
-        <div class="kpi-card"><div class="kpi-label">MILHO SAFRINHA</div><div class="kpi-value" id="kpi-milho">89.5 <span style="font-size:13px">Mt</span></div><div class="kpi-delta down" id="kd-milho">▼ -1.8% vs safra anterior</div><canvas class="kpi-spark" id="sp-milho"></canvas></div>
-        <div class="kpi-card"><div class="kpi-label">NDVI MÉDIO CERRADO</div><div class="kpi-value" id="kpi-ndvi">0.610</div><div class="kpi-delta down" id="kd-ndvi">▼ -0.03 em 14 dias</div><div id="ndvi-phenol-tag" class="ndvi-tag harvest" style="margin-top:3px;">✓ COLHEITA EM ANDAMENTO</div><canvas class="kpi-spark" id="sp-ndvi"></canvas></div>
-        <div class="kpi-card"><div class="kpi-label">UMIDADE SOLO MÉD.</div><div class="kpi-value" id="kpi-hum">34.0<span style="font-size:13px">%</span></div><div class="kpi-delta down" id="kd-hum">▼ Declínio gradual</div><canvas class="kpi-spark" id="sp-hum"></canvas></div>
-        <div class="kpi-card"><div class="kpi-label">BOI GORDO (equiv.)</div><div class="kpi-value" id="kpi-boi">11.2 <span style="font-size:13px">Mt</span></div><div class="kpi-delta up" id="kd-boi">▲ +2.3% vs safra anterior</div><canvas class="kpi-spark" id="sp-boi"></canvas></div>
-        <div class="kpi-card"><div class="kpi-label">HORTIFRUTIS</div><div class="kpi-value" id="kpi-horti">38.4 <span style="font-size:13px">Mt</span></div><div class="kpi-delta down" id="kd-horti">▼ -9.1% anomalia térmica</div><canvas class="kpi-spark" id="sp-horti"></canvas></div>
+        <div class="kpi-card"><div class="kpi-label">SOJA BR 2025/26</div><div class="kpi-value" id="kpi-soja">—</div><div class="kpi-delta down" id="kd-soja">aguardando API</div><canvas class="kpi-spark" id="sp-soja"></canvas></div>
+        <div class="kpi-card"><div class="kpi-label">MILHO SAFRINHA</div><div class="kpi-value" id="kpi-milho">—</div><div class="kpi-delta down" id="kd-milho">aguardando API</div><canvas class="kpi-spark" id="sp-milho"></canvas></div>
+        <div class="kpi-card"><div class="kpi-label">NDVI MÉDIO CERRADO</div><div class="kpi-value" id="kpi-ndvi">—</div><div class="kpi-delta down" id="kd-ndvi">aguardando API</div><div id="ndvi-phenol-tag" class="ndvi-tag harvest" style="margin-top:3px;">✓ COLHEITA EM ANDAMENTO</div><canvas class="kpi-spark" id="sp-ndvi"></canvas></div>
+        <div class="kpi-card"><div class="kpi-label">UMIDADE SOLO MÉD.</div><div class="kpi-value" id="kpi-hum">—</div><div class="kpi-delta down" id="kd-hum">aguardando API</div><canvas class="kpi-spark" id="sp-hum"></canvas></div>
+        <div class="kpi-card"><div class="kpi-label">BOI GORDO (equiv.)</div><div class="kpi-value" id="kpi-boi">—</div><div class="kpi-delta up" id="kd-boi">aguardando API</div><canvas class="kpi-spark" id="sp-boi"></canvas></div>
+        <div class="kpi-card"><div class="kpi-label">HORTIFRUTIS</div><div class="kpi-value" id="kpi-horti">—</div><div class="kpi-delta down" id="kd-horti">aguardando API</div><canvas class="kpi-spark" id="sp-horti"></canvas></div>
       </div>
 
       <!-- HORTIFRUTIS ROW -->
@@ -2563,14 +2563,9 @@ updateClock();
 // ═══════════════════════════════════════════════════════════════════
 const SituationRoom = {
   data: {
-    totals: { in_rj: 3, bankrupt: 1, total_companies: 4, total_debt_billions: 23.35, employees_at_risk: 56481 },
-    recent_entries: [
-      { company_name: 'Agroindustrial Paulista S.A.', cnpj: '12.345.678/0001-90', city: 'São Paulo', state_uf: 'SP', segment: 'Comercialização de Grãos', judicial_status: 'em_recuperacao', debts_total: 150000000 },
-      { company_name: 'Café Premium Minas S.A.', cnpj: '34.567.890/0001-12', city: 'Belo Horizonte', state_uf: 'MG', segment: 'Exportação de Café', judicial_status: 'em_recuperacao', debts_total: 89000000 },
-      { company_name: 'Grão Goiano Comercial Ltda', cnpj: '45.678.901/0001-23', city: 'Goiânia', state_uf: 'GO', segment: 'Trading de Grãos', judicial_status: 'em_recuperacao', debts_total: 125000000 },
-      { company_name: 'Fertilizantes do Interior Ltda', cnpj: '23.456.789/0001-01', city: 'Campinas', state_uf: 'SP', segment: 'Distribuição de Insumos', judicial_status: 'falencia', debts_total: 45000000 }
-    ]
-  },
+    totals: { in_rj: 0, bankrupt: 0, total_companies: 0, total_debt_billions: 0, employees_at_risk: 0 },
+    recent_entries: []
+  },,
   newsData: [],
   refreshInterval: null,
   clockInterval: null,
@@ -2605,23 +2600,49 @@ const SituationRoom = {
   
   async loadRealData() {
     try {
-      // Buscar dados de empresas em crise
-      const crisisResponse = await fetch('/api/crisis/summary');
-      if (crisisResponse.ok) {
-        const crisisData = await crisisResponse.json();
-        if (crisisData.recent_entries && crisisData.recent_entries.length > 0) {
-          this.data = crisisData;
-          this.renderCompanies();
-          this.renderAlertBadge();
-          console.log('[SituationRoom] Dados de empresas atualizados:', crisisData.recent_entries.length);
-        }
+      // Fonte factual: Situation Room / Recuperação Judicial.
+      const response = await fetch('/api/situation/real?limit=500&live=1');
+      if (response.ok) {
+        const payload = await response.json();
+        const cases = Array.isArray(payload.cases) ? payload.cases : [];
+        this.data = {
+          totals: {
+            in_rj: payload.summary?.total_cases_loaded || cases.length,
+            bankrupt: cases.filter(c => String(c.judicial_status || '').toLowerCase().includes('fal')).length,
+            total_companies: cases.length,
+            total_debt_billions: (payload.summary?.total_debt_brl_known || 0) / 1000000000,
+            employees_at_risk: cases.reduce((acc, c) => acc + Number(c.employees || 0), 0)
+          },
+          recent_entries: cases,
+          summary: payload.summary,
+          sources: payload.sources,
+          truth_policy: payload.truth_policy,
+          live_datajud: payload.live_datajud
+        };
+        this.renderCompanies();
+        this.renderAlertBadge();
+        this.renderDataJudStatus();
+        console.log('[SituationRoom] RJ factual atualizado:', cases.length);
+      } else {
+        console.warn('[SituationRoom] API /api/situation/real indisponível:', response.status);
       }
     } catch (e) {
-      console.log('[SituationRoom] Usando dados embutidos (API indisponível)');
+      console.log('[SituationRoom] Usando dados embutidos (API indisponível)', e);
     }
     
     // Buscar notícias reais
     this.loadRealNews();
+  },
+
+  renderDataJudStatus() {
+    const target = document.getElementById('sit-process-details');
+    if (!target || !this.data.live_datajud) return;
+    const live = this.data.live_datajud;
+    if (live.status === 'configuration_needed') {
+      target.textContent = 'CNJ/DataJud: configure DATAJUD_API_KEY no Render para varredura nacional completa. Base atual: curada pública.';
+    } else {
+      target.textContent = `CNJ/DataJud: ${live.status} • tribunais checados: ${(live.tribunals_checked || []).length}`;
+    }
   },
   
   async loadRealNews() {
@@ -2754,7 +2775,9 @@ const SituationRoom = {
       statusEl.style.color = isFalencia ? '#ff3d3d' : '#ff6b35';
     }
     if (detailsEl) {
-      detailsEl.textContent = `Dívida: R$ ${(Number(company.debts_total || 0)/1000000).toFixed(1)} milhões`;
+      const proc = company.process_number ? ` • Proc.: ${company.process_number}` : '';
+      const conf = company.data_confidence ? ` • ${company.data_confidence}` : '';
+      detailsEl.textContent = `Dívida conhecida: R$ ${(Number(company.debts_total || 0)/1000000).toFixed(1)} milhões${proc}${conf}`;
     }
     
     // Timeline
@@ -3201,9 +3224,11 @@ function pushNdviPoint() {
   ndviChart.data.datasets[2].data = [...ndviData.pr_ms];
   ndviChart.data.datasets[3].data = [...ndviData.pampa];
   ndviChart.update('none');
-  // update topbar NDVI
-  setLiveVal('ts-ndvi', nC.toFixed(3), 0.61, 0.001);
-  setLiveVal('cs-ndvi', nC.toFixed(3), 0.61, 0.001);
+  // update topbar NDVI only before API dashboard loads
+  if (!(window.DashboardLive && DashboardLive.lastTopbar)) {
+    setLiveVal('ts-ndvi', nC.toFixed(3), 0.61, 0.001);
+    setLiveVal('cs-ndvi', nC.toFixed(3), 0.61, 0.001);
+  }
 }
 setInterval(pushNdviPoint, 3000);
 
@@ -3231,6 +3256,9 @@ const wxBase = [
   { t: 31.5, h: 84, w: 5  },
 ];
 function updateWeather() {
+  if (window.DashboardLive && DashboardLive.lastWeather && DashboardLive.lastWeather.length) {
+    return;
+  }
   wxBase.forEach((b, i) => {
     const n = i + 1;
     const t = +(b.t + (Math.random()-.5)*.4).toFixed(1);
@@ -11106,6 +11134,139 @@ window.PredictXLive = {
 })();
 
 
+
+
+
+// ═══════════════════════════════════════════════════════════════════
+// DASHBOARD INICIAL — cards atualizados por API real/curada
+// ═══════════════════════════════════════════════════════════════════
+const DashboardLive = {
+  lastWeather: [],
+  lastTopbar: null,
+  async load(){
+    try{
+      const r = await fetch('/api/dashboard/summary', {cache:'no-store'});
+      if(!r.ok) throw new Error('HTTP ' + r.status);
+      const data = await r.json();
+      this.lastWeather = data.weather || [];
+      this.lastTopbar = data.topbar || null;
+      this.renderCards(data.cards || []);
+      this.renderWeather(data.weather || []);
+      this.renderAlerts(data.alerts || []);
+      this.renderTopbar(data.topbar || {}, data.quality || {});
+      this.renderMarket(data.market || []);
+      this.renderMacro(data.macro || {});
+      this.renderSituation(data.situation || {});
+      this.renderSources(data.sources || []);
+      this.renderStamp(data);
+    }catch(e){
+      console.warn('Dashboard summary indisponível:', e);
+      this.renderStamp({status:'degraded', message:'API do dashboard indisponível'});
+    }
+  },
+  renderCards(cards){
+    const byId = Object.fromEntries(cards.map(c=>[c.id,c]));
+    ['kpi-soja','kpi-milho','kpi-ndvi','kpi-hum','kpi-boi','kpi-horti'].forEach(id=>{
+      const c=byId[id];
+      if(!c) return;
+      const val=document.getElementById(id);
+      const delta=document.getElementById('kd-' + id.replace('kpi-',''));
+      const label=val?.parentElement?.querySelector('.kpi-label');
+      if(label && c.label) label.textContent = c.label;
+      if(val) val.textContent = c.value || '—';
+      if(delta){
+        delta.textContent = c.delta || 'sem atualização';
+        delta.classList.remove('up','down','neutral');
+        delta.classList.add(c.delta_class || 'neutral');
+        delta.title = `Fonte: ${c.source || 'não informada'} | Data: ${c.date || '—'} | Qualidade: ${c.quality || '—'}`;
+      }
+    });
+  },
+  renderWeather(rows){
+    rows.slice(0,6).forEach((w,i)=>{
+      const n=i+1;
+      const card=document.querySelectorAll('.weather-row .wx-card')[i];
+      if(!card) return;
+      const region=card.querySelector('.wx-region');
+      const t=document.getElementById('wx-t'+n);
+      const h=document.getElementById('wx-h'+n);
+      const wind=document.getElementById('wx-w'+n);
+      const st=document.getElementById('wx-s'+n);
+      if(region) region.textContent = w.region || 'Região monitorada';
+      if(t) t.textContent = w.temp || '—';
+      if(h) h.textContent = w.humidity || 'Umid: —';
+      if(wind) wind.textContent = w.wind || 'Vento: —';
+      if(st){
+        st.textContent = w.status || 'monitorado';
+        st.style.color = w.level === 'danger' ? 'var(--danger)' : w.level === 'warn' ? 'var(--warn)' : 'var(--accent2)';
+        st.title = `Fonte: ${w.source || '—'} | Data: ${w.date || '—'} | Qualidade: ${w.quality || '—'}`;
+      }
+    });
+  },
+  renderAlerts(alerts){
+    const strip=document.querySelector('#alerts-strip .alert-scroll');
+    const list=document.getElementById('alerts-list');
+    if(strip){
+      strip.innerHTML = alerts.length
+        ? alerts.map(a=>`<span class="alert-item">⚠ ${escapeHtml(a.title||'ALERTA')} — ${escapeHtml(a.region_key||'BR')} · ${escapeHtml(a.severity_label||a.severity||'') }<span class="sep">|</span></span>`).join('')
+        : '<span class="alert-item">SEM ALERTAS OFICIAIS ATIVOS — aguardando fontes observadas<span class="sep">|</span></span>';
+    }
+    if(list){
+      list.innerHTML = alerts.length ? alerts.slice(0,6).map(a=>`
+        <div class="alert-card" onclick="showPanel('map')" title="Fonte: ${escapeHtml(a.source||'—')} | Qualidade: ${escapeHtml(a.quality||'—')}">
+          <div class="alert-card-header"><span class="alert-card-title">${escapeHtml(a.title||'ALERTA')}</span><span class="severity ${(a.severity==='vermelho')?'alta':(a.severity==='laranja')?'media':'baixa'}">${escapeHtml(a.severity_label||a.severity||'ATENÇÃO')}</span></div>
+          <div class="alert-card-body">${escapeHtml(a.region_key||'BR')} — ${escapeHtml(a.message||'Sem descrição detalhada.')}</div>
+        </div>`).join('') : '<div class="alert-card"><div class="alert-card-header"><span class="alert-card-title">SEM ALERTAS ATIVOS</span><span class="severity baixa">OK</span></div><div class="alert-card-body">Nenhum alerta válido encontrado nas fontes carregadas.</div></div>';
+    }
+    const newsSummary=document.getElementById('news-summary');
+    if(newsSummary) newsSummary.textContent = `${alerts.length} alertas ativos`;
+  },
+  renderTopbar(topbar, quality){
+    if(topbar.temperature){ setLiveVal('ts-temp', topbar.temperature, 0, 0); setLiveVal('cs-temp', topbar.temperature, 0, 0); }
+    if(topbar.ndvi){ setLiveVal('ts-ndvi', topbar.ndvi, 0, 0); setLiveVal('cs-ndvi', topbar.ndvi, 0, 0); }
+    const badge=document.querySelector('.badge-live');
+    if(badge){
+      badge.textContent = topbar.status === 'LIVE' ? '● LIVE DATA' : '● DEGRADED';
+      badge.title = `Cards observados: ${quality.observed_cards || 0}/${quality.total_cards || 0}`;
+    }
+  },
+  renderMarket(rows){
+    window.NIAS_DASHBOARD_MARKET = rows;
+    const el=document.getElementById('flv-kpi-alerts');
+    if(el) el.textContent = String(rows.length || 0);
+  },
+  renderMacro(macro){
+    window.NIAS_DASHBOARD_MACRO = macro;
+  },
+  renderSituation(situation){
+    window.NIAS_DASHBOARD_SITUATION = situation;
+  },
+  renderSources(sources){
+    window.NIAS_DASHBOARD_SOURCES = sources;
+  },
+  renderStamp(data){
+    let stamp=document.getElementById('dashboard-data-stamp');
+    if(!stamp){
+      const header=document.querySelector('.topbar-right') || document.querySelector('.badge-live')?.parentElement;
+      if(header){
+        stamp=document.createElement('span');
+        stamp.id='dashboard-data-stamp';
+        stamp.style.cssText='font-size:10px;color:var(--text2);margin-left:10px;';
+        header.appendChild(stamp);
+      }
+    }
+    if(stamp){
+      const dt=data.updated_at ? new Date(data.updated_at).toLocaleString('pt-BR') : '—';
+      stamp.textContent = `Dados: ${data.status || '—'} · ${dt}`;
+      stamp.title = data.message || (data.quality ? data.quality.rule : 'Resumo atualizado por API');
+    }
+  }
+};
+
+document.addEventListener('DOMContentLoaded',()=>{
+  setTimeout(()=>DashboardLive.load(),250);
+  setInterval(()=>DashboardLive.load(),15*60*1000);
+});
 
 // ═══════════════════════════════════════════════════════════════════
 // SYSTEM AUDIT — fontes reais, qualidade e abas consolidadas

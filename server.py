@@ -250,6 +250,9 @@ class ProxyHandler(http.server.SimpleHTTPRequestHandler):
         if self.path == '/api/ceasas':
             self._serve_ceasas()
             return
+        if self.path.startswith('/api/dashboard/summary'):
+            self._serve_dashboard_summary_api()
+            return
         if self.path == '/api/produtores':
             self._serve_produtores()
             return
@@ -566,6 +569,27 @@ class ProxyHandler(http.server.SimpleHTTPRequestHandler):
             self.send_header('Content-Type', 'application/json')
             self.end_headers()
             self.wfile.write(json.dumps({'error': str(e)}).encode())
+
+
+    def _serve_situation_real_api(self):
+        """Situation Room factual: Recuperação Judicial + DataJud quando configurado."""
+        from urllib.parse import urlparse, parse_qs
+        try:
+            from flv.situation.recovery_judicial_registry import build_situation_room_payload
+            parsed = urlparse(self.path)
+            params = parse_qs(parsed.query)
+            uf = params.get('uf', [None])[0]
+            include_live = params.get('live', ['1'])[0] not in ('0', 'false', 'False')
+            limit = int(params.get('limit', ['500'])[0])
+            result = build_situation_room_payload(uf=uf, include_live=include_live, limit=limit)
+            self.send_response(200)
+        except Exception as e:
+            result = {'status': 'error', 'error': str(e), 'endpoint': '/api/situation/real'}
+            self.send_response(500)
+        self._cors()
+        self.send_header('Content-Type', 'application/json')
+        self.end_headers()
+        self.wfile.write(json.dumps(result, ensure_ascii=False, default=str).encode())
 
     def _serve_growth_api(self):
         """API de GrowthRadar - Radar de Crescimento"""
