@@ -3003,7 +3003,7 @@ function showPanel(id) {
     if (id === 'logistica' && window._sankeyInit) { setTimeout(() => { try { updateArbitragem(); } catch(e) {} setTimeout(() => { try { logMap && logMap.invalidateSize(); } catch(e) {} }, 80); }, 50); }
     if (id.startsWith('flv_')) setTimeout(() => { try { FLVModule.onPanelShow(id); } catch(e) { console.error('FLVModule error:', e); } }, 100);
     if (id === 'predictix') setTimeout(() => { try { Predictix.init(); } catch(e) { console.error('Predictix init error:', e); } }, 150);
-    if (id === 'oferta' && !window._ofertaInit) { try { initOferta(); initCeasaTerminal(); } catch(e) { console.error('oferta init error:', e); } }
+    if (id === 'oferta' && !window._ofertaInit) { try { initMercadoReal(); } catch(e) { console.error('oferta/mercado init error:', e); } }
     if (id === 'municipal' && !window._munInit) { try { initMunicipal(); } catch(e) { console.error('municipal init error:', e); } }
     if (id === 'municipal') setTimeout(() => { try { munMap && munMap.invalidateSize(); } catch(e) {} }, 120);
     if (id === 'biocommand') { try { initBioCommand(); } catch(e) { console.error('biocommand init error:', e); } }
@@ -3590,6 +3590,72 @@ const ADMIN_BOUNDARY = {
   layers: {}
 };
 
+
+// Fallback local leve: garante que as divisas apareçam mesmo se geoBoundaries/IBGE/CDN
+// estiverem bloqueados por CORS, DNS ou rede do navegador. As camadas externas
+// continuam sendo carregadas por cima quando disponíveis.
+const LOCAL_ADMIN_FALLBACK = {
+  countries: [
+    ['Brasil', [[5.2,-73.9],[5.2,-34.8],[-33.8,-34.8],[-33.8,-73.9],[5.2,-73.9]]],
+    ['Argentina', [[-21.8,-73.6],[-21.8,-53.6],[-55.1,-53.6],[-55.1,-73.6],[-21.8,-73.6]]],
+    ['Chile', [[-17.5,-75.8],[-17.5,-66.4],[-55.9,-66.4],[-55.9,-75.8],[-17.5,-75.8]]],
+    ['Uruguai', [[-30.0,-58.6],[-30.0,-53.0],[-35.2,-53.0],[-35.2,-58.6],[-30.0,-58.6]]],
+    ['Paraguai', [[-19.3,-62.7],[-19.3,-54.2],[-27.6,-54.2],[-27.6,-62.7],[-19.3,-62.7]]],
+    ['Bolívia', [[-9.6,-69.7],[-9.6,-57.4],[-22.9,-57.4],[-22.9,-69.7],[-9.6,-69.7]]],
+    ['Peru', [[0.2,-81.5],[0.2,-68.5],[-18.5,-68.5],[-18.5,-81.5],[0.2,-81.5]]],
+    ['Colômbia', [[12.6,-79.0],[12.6,-66.7],[-4.3,-66.7],[-4.3,-79.0],[12.6,-79.0]]],
+    ['Equador', [[1.7,-81.2],[1.7,-75.1],[-5.1,-75.1],[-5.1,-81.2],[1.7,-81.2]]],
+    ['Venezuela', [[12.5,-73.4],[12.5,-59.8],[0.6,-59.8],[0.6,-73.4],[12.5,-73.4]]],
+    ['Guiana', [[8.7,-61.4],[8.7,-56.4],[1.1,-56.4],[1.1,-61.4],[8.7,-61.4]]],
+    ['Suriname', [[6.1,-58.2],[6.1,-53.9],[1.8,-53.9],[1.8,-58.2],[6.1,-58.2]]],
+    ['Guiana Francesa', [[5.9,-54.7],[5.9,-51.6],[2.1,-51.6],[2.1,-54.7],[5.9,-54.7]]]
+  ],
+  brStates: [
+    ['AC', [[-7.0,-74.1],[-7.0,-66.6],[-11.2,-66.6],[-11.2,-74.1],[-7.0,-74.1]]],
+    ['AM', [[2.3,-73.8],[2.3,-56.0],[-9.8,-56.0],[-9.8,-73.8],[2.3,-73.8]]],
+    ['RR', [[5.4,-64.9],[5.4,-58.8],[-1.6,-58.8],[-1.6,-64.9],[5.4,-64.9]]],
+    ['RO', [[-7.8,-66.9],[-7.8,-59.7],[-13.8,-59.7],[-13.8,-66.9],[-7.8,-66.9]]],
+    ['PA', [[2.7,-58.9],[2.7,-46.0],[-9.9,-46.0],[-9.9,-58.9],[2.7,-58.9]]],
+    ['AP', [[4.5,-54.9],[4.5,-49.8],[-1.3,-49.8],[-1.3,-54.9],[4.5,-54.9]]],
+    ['TO', [[-5.2,-50.8],[-5.2,-45.7],[-13.5,-45.7],[-13.5,-50.8],[-5.2,-50.8]]],
+    ['MA', [[-1.0,-48.8],[-1.0,-41.8],[-10.3,-41.8],[-10.3,-48.8],[-1.0,-48.8]]],
+    ['PI', [[-2.7,-45.9],[-2.7,-40.4],[-10.9,-40.4],[-10.9,-45.9],[-2.7,-45.9]]],
+    ['CE', [[-2.7,-41.5],[-2.7,-37.2],[-7.9,-37.2],[-7.9,-41.5],[-2.7,-41.5]]],
+    ['RN', [[-4.8,-38.7],[-4.8,-34.8],[-6.9,-34.8],[-6.9,-38.7],[-4.8,-38.7]]],
+    ['PB', [[-6.0,-38.8],[-6.0,-34.7],[-8.4,-34.7],[-8.4,-38.8],[-6.0,-38.8]]],
+    ['PE', [[-7.2,-41.4],[-7.2,-34.8],[-9.7,-34.8],[-9.7,-41.4],[-7.2,-41.4]]],
+    ['AL', [[-8.8,-38.3],[-8.8,-35.1],[-10.5,-35.1],[-10.5,-38.3],[-8.8,-38.3]]],
+    ['SE', [[-9.5,-38.2],[-9.5,-36.3],[-11.6,-36.3],[-11.6,-38.2],[-9.5,-38.2]]],
+    ['BA', [[-8.5,-46.8],[-8.5,-37.3],[-18.4,-37.3],[-18.4,-46.8],[-8.5,-46.8]]],
+    ['MT', [[-7.0,-61.6],[-7.0,-50.2],[-18.2,-50.2],[-18.2,-61.6],[-7.0,-61.6]]],
+    ['MS', [[-17.0,-58.2],[-17.0,-51.0],[-24.2,-51.0],[-24.2,-58.2],[-17.0,-58.2]]],
+    ['GO', [[-12.4,-53.3],[-12.4,-45.9],[-19.5,-45.9],[-19.5,-53.3],[-12.4,-53.3]]],
+    ['DF', [[-15.5,-48.3],[-15.5,-47.3],[-16.1,-47.3],[-16.1,-48.3],[-15.5,-48.3]]],
+    ['MG', [[-14.0,-51.1],[-14.0,-39.8],[-22.9,-39.8],[-22.9,-51.1],[-14.0,-51.1]]],
+    ['ES', [[-17.8,-41.9],[-17.8,-39.6],[-21.4,-39.6],[-21.4,-41.9],[-17.8,-41.9]]],
+    ['RJ', [[-20.7,-44.9],[-20.7,-40.9],[-23.4,-40.9],[-23.4,-44.9],[-20.7,-44.9]]],
+    ['SP', [[-19.8,-53.1],[-19.8,-44.0],[-25.4,-44.0],[-25.4,-53.1],[-19.8,-53.1]]],
+    ['PR', [[-22.5,-54.7],[-22.5,-48.0],[-26.8,-48.0],[-26.8,-54.7],[-22.5,-54.7]]],
+    ['SC', [[-25.9,-53.9],[-25.9,-48.3],[-29.4,-48.3],[-29.4,-53.9],[-25.9,-53.9]]],
+    ['RS', [[-27.0,-57.7],[-27.0,-49.7],[-33.8,-49.7],[-33.8,-57.7],[-27.0,-57.7]]]
+  ]
+};
+
+function addLocalAdminFallback(map, groupKey, includeBrazilStates=true) {
+  if (!map || !window.L) return null;
+  const group = L.layerGroup().addTo(map);
+  const addPoly = (name, coords, kind) => {
+    const layer = L.polygon(coords, adminBoundaryStyle(kind));
+    layer.bindTooltip(`${kind === 'state' ? 'UF' : 'País'}: ${name}`, {sticky:true, className:'admin-boundary-tooltip'});
+    layer.addTo(group);
+  };
+  LOCAL_ADMIN_FALLBACK.countries.forEach(([name, coords]) => addPoly(name, coords, 'country'));
+  if (includeBrazilStates) LOCAL_ADMIN_FALLBACK.brStates.forEach(([name, coords]) => addPoly(name, coords, 'state'));
+  ADMIN_BOUNDARY.layers[groupKey] = ADMIN_BOUNDARY.layers[groupKey] || [];
+  ADMIN_BOUNDARY.layers[groupKey].push(group);
+  return group;
+}
+
 function adminBoundaryStyle(kind='country') {
   if (kind === 'state') {
     return { color:'#ffdf6b', weight:0.75, opacity:0.92, fillOpacity:0, dashArray:'2,4', interactive:false };
@@ -3695,6 +3761,7 @@ function initMap() {
   window._mapInit = true;
   leafletMap = L.map('map', { center: [-10, -60], zoom: 3, zoomControl: true });
   L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution: '© CartoDB', maxZoom: 18 }).addTo(leafletMap);
+  addLocalAdminFallback(leafletMap, 'main-local-fallback', true);
   addCountryContours(leafletMap, 'main-countries-real', ADMIN_BOUNDARY.southAmerica).then(() => setBoundaryStatus('main-boundary-status','países reais carregados',true)).catch(() => setBoundaryStatus('main-boundary-status','países: fallback local',false));
   addStateContours(leafletMap, 'main-states', ADMIN_BOUNDARY.southAmerica).then(() => setBoundaryStatus('main-boundary-status','países + estados/províncias reais ativos',true)).catch(() => setBoundaryStatus('main-boundary-status','estados/províncias: fonte externa indisponível',false));
 
@@ -6016,6 +6083,7 @@ function initMunicipal() {
   L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
     { attribution:'© CartoDB', maxZoom:18 }).addTo(munMap);
 
+  addLocalAdminFallback(munMap, 'municipal-local-fallback', true);
   addCountryContours(munMap, 'municipal-countries-real', ADMIN_BOUNDARY.southAmerica).catch(e => console.warn('municipal countries', e));
   addStateContours(munMap, 'municipal-states', ADMIN_BOUNDARY.southAmerica).catch(e => console.warn('municipal states', e));
 
@@ -9825,6 +9893,7 @@ window.Predictix = {
     if (!this._initialized) {
       this._map = L.map('px-map', { zoomControl:true, attributionControl:false }).setView([-10, -60], 3);
       L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {maxZoom:18, opacity:0.7}).addTo(this._map);
+      addLocalAdminFallback(this._map, 'predictx-local-fallback', true);
       // Thin state borders
       this._flowLayer = L.layerGroup().addTo(this._map);
       this._climaLayer = L.layerGroup();
@@ -10891,7 +10960,7 @@ function renderCeasaOfficialPrices(data) {
       <td style="padding:5px;border-bottom:1px solid var(--border);font-size:9px;color:var(--text);font-weight:bold;">${escapeHtml(r.product || '—')}</td>
       <td style="padding:5px;border-bottom:1px solid var(--border);font-size:9px;color:var(--warn);text-align:right;font-family:var(--font);">R$ ${Number(r.price || 0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}<br><span style="font-size:8px;color:var(--text2);">${escapeHtml(r.unit || '')}</span></td>
       <td style="padding:5px;border-bottom:1px solid var(--border);font-size:9px;color:var(--text2);">${escapeHtml(r.date || '—')}</td>
-      <td style="padding:5px;border-bottom:1px solid var(--border);font-size:8px;color:var(--text2);">${escapeHtml(r.source || '—')}<br><span style="color:${r.quality === 'official_collected' ? 'var(--accent2)' : 'var(--warn)'};">${r.quality === 'official_collected' ? 'OFICIAL' : 'CACHE/VALIDAR'}</span></td>
+      <td style="padding:5px;border-bottom:1px solid var(--border);font-size:8px;color:var(--text2);">${escapeHtml(r.source || '—')}<br><span style="color:${r.quality === 'official_collected' ? 'var(--accent2)' : 'var(--warn)'};">${String(r.quality || '').startsWith('official') ? 'OFICIAL' : 'CACHE/VALIDAR'}</span></td>
     </tr>`).join('');
 }
 
