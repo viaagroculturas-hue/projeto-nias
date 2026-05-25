@@ -22,8 +22,11 @@ if not os.path.exists(SCHEMA_PATH):
     SCHEMA_PATH = os.path.join(ROOT_PATH, 'flv_schema.sql')
 
 _conn_cache = {}
+_schema_checked = False
+
 
 def get_conn():
+    global _schema_checked
     tid = id(os.getpid())
     if tid not in _conn_cache:
         conn = sqlite3.connect(DB_PATH, check_same_thread=False, timeout=10)
@@ -31,6 +34,13 @@ def get_conn():
         conn.execute("PRAGMA busy_timeout=5000")
         conn.execute("PRAGMA foreign_keys=ON")
         conn.row_factory = sqlite3.Row
+        if not _schema_checked:
+            try:
+                from flv.db_migration import ensure_runtime_schema
+                ensure_runtime_schema(conn)
+                _schema_checked = True
+            except Exception as e:
+                print(f'[FLV] schema migration warning: {e}')
         _conn_cache[tid] = conn
     return _conn_cache[tid]
 
@@ -230,10 +240,28 @@ def upsert_global_climate(obs_date, oni=None, atl_north_warm_idx=None, source="N
 
 def query(sql, params=()):
     conn = get_conn()
-    rows = conn.execute(sql, params).fetchall()
+    try:
+        rows = conn.execute(sql, params).fetchall()
+    except sqlite3.OperationalError as e:
+        # Old deployments may have a populated DB without quality columns.
+        # Apply migration once and retry, so APIs do not fail with HTTP 500.
+        if 'no such column' in str(e).lower():
+            from flv.db_migration import ensure_runtime_schema
+            ensure_runtime_schema(conn)
+            rows = conn.execute(sql, params).fetchall()
+        else:
+            raise
     return [dict(r) for r in rows]
 
 def execute(sql, params=()):
     conn = get_conn()
-    conn.execute(sql, params)
+    try:
+        conn.execute(sql, params)
+    except sqlite3.OperationalError as e:
+        if 'no such column' in str(e).lower():
+            from flv.db_migration import ensure_runtime_schema
+            ensure_runtime_schema(conn)
+            conn.execute(sql, params)
+        else:
+            raise
     conn.commit()

@@ -280,6 +280,46 @@ def _load_local_ceasa_db(base_dir: str) -> List[Dict[str, Any]]:
                         "quality": "local_cache_verify_source",
                         "is_real_price": True,
                     })
+
+            # Banco principal do NIAS: preços CEASA normalizados.
+            # Regra de verdade: somente linhas não sintéticas entram como preço exibível.
+            if "flv_ceasa_prices" in tables and "flv_cultures" in tables:
+                rows = cur.execute(
+                    """
+                    SELECT p.terminal, p.price_date, p.price_avg, p.price_min, p.price_max,
+                           p.source, p.data_quality, p.is_synthetic,
+                           c.name_pt, c.conab_key, c.unit
+                    FROM flv_ceasa_prices p
+                    JOIN flv_cultures c ON c.id = p.culture_id
+                    WHERE COALESCE(p.is_synthetic,0)=0
+                      AND p.price_avg IS NOT NULL
+                      AND p.price_avg > 0
+                    ORDER BY date(p.price_date) DESC, p.id DESC
+                    LIMIT 8000
+                    """
+                ).fetchall()
+                for row in rows:
+                    d = dict(row)
+                    terminal = d.get("terminal") or ""
+                    uf = _guess_uf(terminal, d.get("source") or "")
+                    product = d.get("name_pt") or d.get("conab_key") or ""
+                    price = _parse_decimal(d.get("price_avg"))
+                    if not product or price is None:
+                        continue
+                    out.append({
+                        "uf": uf,
+                        "state": UF_NAMES.get(uf, uf or "não identificado"),
+                        "ceasa": terminal or (f"CEASA-{uf}" if uf else "não identificado"),
+                        "product": product,
+                        "classification": d.get("conab_key") or "",
+                        "price": price,
+                        "unit": d.get("unit") or "R$/kg",
+                        "date": d.get("price_date") or "",
+                        "source": d.get("source") or "CONAB/PROHORT",
+                        "source_url": db_path,
+                        "quality": "official_local_db",
+                        "is_real_price": True,
+                    })
             conn.close()
         except Exception:
             continue
@@ -309,25 +349,27 @@ def build_ceasa_price_payload(base_dir: Optional[str] = None, force_refresh: boo
     records: List[Dict[str, Any]] = []
     errors: List[Dict[str, str]] = []
 
-    for url in PROHORT_DOWNLOAD_CANDIDATES:
-        try:
-            raw = _fetch_url(url, timeout=70)
-            parsed = _parse_prohort_text(raw, url)
-            records.extend(parsed)
-            if parsed:
-                break
-        except Exception as exc:
-            errors.append({"source": url, "error": str(exc)[:240]})
-
-    if not records:
-        try:
-            raw = _fetch_url(PROHORT_DAILY_HTML, timeout=45)
-            records.extend(_parse_prohort_html(raw))
-        except Exception as exc:
-            errors.append({"source": PROHORT_DAILY_HTML, "error": str(exc)[:240]})
-
-    # Local cache is used as fallback/additional, but quality is marked differently.
+    # Carregamento rápido e confiável: primeiro usa o banco versionado em /data.
+    # Coleta online pesada da CONAB só roda com refresh=1, para não congelar a aba Mercado.
     records.extend(_load_local_ceasa_db(base_dir))
+
+    if force_refresh or not records:
+        for url in PROHORT_DOWNLOAD_CANDIDATES:
+            try:
+                raw = _fetch_url(url, timeout=18)
+                parsed = _parse_prohort_text(raw, url)
+                records.extend(parsed)
+                if parsed:
+                    break
+            except Exception as exc:
+                errors.append({"source": url, "error": str(exc)[:240]})
+
+        if not records:
+            try:
+                raw = _fetch_url(PROHORT_DAILY_HTML, timeout=12)
+                records.extend(_parse_prohort_html(raw))
+            except Exception as exc:
+                errors.append({"source": PROHORT_DAILY_HTML, "error": str(exc)[:240]})
     records = _dedupe_latest(records)
 
     by_uf: Dict[str, Dict[str, Any]] = {}

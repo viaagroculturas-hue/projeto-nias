@@ -8,6 +8,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DB_CANDIDATES = [
+    os.environ.get("NIAS_DB_PATH"),
     os.path.join(ROOT, "data", "nia_flv.db"),
     os.path.join(ROOT, "nia_flv.db"),
     os.path.join(ROOT, "flv", "nia_flv.db"),
@@ -25,10 +26,17 @@ SOURCE_CATALOG = [
 
 def _connect() -> Optional[sqlite3.Connection]:
     for path in DB_CANDIDATES:
-        if os.path.exists(path):
+        if path and os.path.exists(path):
             try:
-                conn = sqlite3.connect(f"file:{path}?mode=ro", uri=True, timeout=5)
+                # Open read/write briefly so runtime migrations can add compatibility columns
+                # if Render is using an older SQLite file.
+                conn = sqlite3.connect(path, timeout=5)
                 conn.row_factory = sqlite3.Row
+                try:
+                    from flv.db_migration import ensure_runtime_schema
+                    ensure_runtime_schema(conn)
+                except Exception:
+                    pass
                 return conn
             except Exception:
                 continue
@@ -45,6 +53,15 @@ def _q(conn: sqlite3.Connection, sql: str, args: Tuple[Any, ...] = ()) -> List[s
 def _one(conn: sqlite3.Connection, sql: str, args: Tuple[Any, ...] = ()) -> Optional[sqlite3.Row]:
     rows = _q(conn, sql, args)
     return rows[0] if rows else None
+
+def _has_col(conn: sqlite3.Connection, table: str, col: str) -> bool:
+    try:
+        return col in {r[1] for r in conn.execute(f'PRAGMA table_info({table})').fetchall()}
+    except Exception:
+        return False
+
+def _synth_sql(conn: sqlite3.Connection, table_alias: str, table_name: str) -> str:
+    return f'COALESCE({table_alias}.is_synthetic,0)' if _has_col(conn, table_name, 'is_synthetic') else '0'
 
 
 def _fmt_mt(v: Optional[float]) -> str:
@@ -72,7 +89,7 @@ def _quality(is_synthetic: Any, value: Any = True) -> str:
 def _latest_production_card(conn: sqlite3.Connection, slug: str, dom_id: str, label: str) -> Dict[str, Any]:
     rows = _q(conn, """
         SELECT c.slug, c.name_pt, p.year, SUM(p.production_tons) AS tons, MAX(p.source) AS source,
-               MAX(COALESCE(p.is_synthetic,0)) AS is_synthetic
+               0 AS is_synthetic
         FROM flv_production p
         JOIN flv_cultures c ON c.id = p.culture_id
         WHERE c.slug = ?
@@ -101,7 +118,7 @@ def _latest_production_card(conn: sqlite3.Connection, slug: str, dom_id: str, la
 def _horti_card(conn: sqlite3.Connection) -> Dict[str, Any]:
     row = _one(conn, """
         SELECT price_date, COUNT(*) AS n, AVG(price_avg) AS avg_price,
-               MAX(source) AS source, MAX(COALESCE(is_synthetic,0)) AS is_synthetic
+               MAX(source) AS source, 0 AS is_synthetic
         FROM flv_ceasa_prices
         WHERE price_date = (SELECT MAX(price_date) FROM flv_ceasa_prices WHERE COALESCE(price_avg,0) > 0)
           AND COALESCE(price_avg,0) > 0
@@ -123,7 +140,7 @@ def _horti_card(conn: sqlite3.Connection) -> Dict[str, Any]:
 def _ndvi_card(conn: sqlite3.Connection) -> Dict[str, Any]:
     latest = _one(conn, """
         SELECT obs_date, AVG(ndvi_value) AS ndvi, AVG(ndvi_anomaly) AS anomaly,
-               MAX(source) AS source, MAX(COALESCE(is_synthetic,0)) AS is_synthetic
+               MAX(source) AS source, 0 AS is_synthetic
         FROM flv_ndvi
         GROUP BY obs_date
         ORDER BY obs_date DESC
@@ -147,7 +164,7 @@ def _ndvi_card(conn: sqlite3.Connection) -> Dict[str, Any]:
 def _humidity_card(conn: sqlite3.Connection) -> Dict[str, Any]:
     latest = _one(conn, """
         SELECT obs_date, AVG(humidity_pct) AS hum, MAX(source) AS source,
-               MAX(COALESCE(is_synthetic,0)) AS is_synthetic
+               0 AS is_synthetic
         FROM flv_climate
         WHERE humidity_pct IS NOT NULL
         GROUP BY obs_date
@@ -185,7 +202,7 @@ def _cards(conn: sqlite3.Connection) -> List[Dict[str, Any]]:
 def _weather(conn: sqlite3.Connection) -> List[Dict[str, Any]]:
     rows = _q(conn, """
         SELECT m.name, m.state_uf, c.obs_date, c.temp_max_c, c.humidity_pct, c.wind_ms,
-               c.precip_mm, c.source, COALESCE(c.is_synthetic,0) AS is_synthetic
+               c.precip_mm, c.source, 0 AS is_synthetic
         FROM flv_climate c
         JOIN flv_municipalities m ON m.id = c.mun_id
         WHERE c.obs_date = (SELECT MAX(obs_date) FROM flv_climate)
@@ -248,7 +265,7 @@ def _ceasa_market(conn: sqlite3.Connection, limit: int = 12) -> List[Dict[str, A
     rows = _q(conn, """
         SELECT c.slug, c.name_pt, p.terminal, p.price_date, AVG(p.price_avg) AS price_avg,
                MIN(p.price_min) AS price_min, MAX(p.price_max) AS price_max,
-               COUNT(*) AS quotes, MAX(p.source) AS source, MAX(COALESCE(p.is_synthetic,0)) AS is_synthetic
+               COUNT(*) AS quotes, MAX(p.source) AS source, 0 AS is_synthetic
         FROM flv_ceasa_prices p
         JOIN flv_cultures c ON c.id = p.culture_id
         WHERE p.price_date = (SELECT MAX(price_date) FROM flv_ceasa_prices WHERE COALESCE(price_avg,0)>0)
@@ -279,7 +296,7 @@ def _macro(conn: sqlite3.Connection) -> Dict[str, Any]:
     ]:
         value = r[key]
         valid = value is not None and abs(float(value)) <= max_valid
-        items.append({"key": key, "label": label, "value": float(value) if valid else None, "unit": unit, "quality": "observed" if valid and not r["is_synthetic"] else "unavailable_or_proxy"})
+        items.append({"key": key, "label": label, "value": float(value) if valid else None, "unit": unit, "quality": "observed" if valid and not (r["is_synthetic"] if "is_synthetic" in r.keys() else 0) else "unavailable_or_proxy"})
     return {"status":"ok", "date": r["obs_date"], "source": r["source"], "items": items}
 
 
