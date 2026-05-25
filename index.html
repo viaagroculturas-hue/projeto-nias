@@ -351,6 +351,18 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:13
 .map-stats p{font-size:10px;color:var(--text2);}
 .map-stats strong{color:var(--accent2);}
 .map-sat-bar{position:absolute;top:10px;left:10px;z-index:999;background:rgba(5,14,26,.92);border:1px solid var(--border);border-radius:8px;padding:8px 12px;min-width:200px;}
+
+.admin-boundary-tooltip{
+  background:rgba(2,10,18,.94)!important;
+  border:1px solid rgba(0,212,255,.55)!important;
+  color:#dff8ff!important;
+  font-family:var(--font)!important;
+  font-size:10px!important;
+  letter-spacing:.5px!important;
+  box-shadow:0 0 18px rgba(0,212,255,.22)!important;
+}
+.leaflet-interactive.admin-boundary-state{mix-blend-mode:screen;}
+
 .sat-title{color:var(--accent);font-size:10px;letter-spacing:1px;margin-bottom:6px;}
 .sat-row{display:flex;justify-content:space-between;font-size:10px;margin-bottom:3px;}
 .sat-name{color:var(--text2);}
@@ -1144,6 +1156,8 @@ tr:hover td{background:rgba(0,212,255,.04);}
           <div class="layer-toggle"><input type="checkbox" id="l9" checked onchange="toggleLayer('tomate-ind',this)"><label for="l9" style="color:var(--accent3)">🍅 Tomate Indústria</label></div>
           <div class="layer-toggle"><input type="checkbox" id="l10" onchange="toggleLayer('planet',this)"><label for="l10" style="color:#7ec850">🛰 Planet (3m)</label></div>
           <div class="layer-toggle"><input type="checkbox" id="l11" checked onchange="toggleLayer('country-borders',this)"><label for="l11" style="color:#00d4ff">🌎 Contornos Países</label></div>
+          <div class="layer-toggle"><input type="checkbox" id="l12" checked onchange="toggleAdminBoundaryGroup('main-states',this.checked)"><label for="l12" style="color:#ffdf6b">▧ Estados/Províncias reais</label></div>
+          <div id="main-boundary-status" style="font-size:8px;color:var(--text2);margin-top:2px;">carregando divisas oficiais…</div>
           <div style="margin-top:6px;">
             <div class="map-ctrl-title">LEGENDA NDVI</div>
             <div class="legend-item"><div class="legend-dot" style="background:#00a550"></div><span class="legend-label">&gt; 0.70 — Saúde plena</span></div>
@@ -1679,6 +1693,7 @@ tr:hover td{background:rgba(0,212,255,.04);}
                 <button id="btn-risk-impact" onclick="setRiskMode('impact')" class="lyr-btn" style="background:rgba(5,14,26,.88);font-size:9px;padding:3px 8px;" title="Modo Impacto: áreas preenchidas">🔴 Impacto</button>
                 <button id="btn-risk-off" onclick="setRiskMode('off')" class="lyr-btn" style="background:rgba(5,14,26,.88);font-size:9px;padding:3px 8px;" title="Desligar risco">✕ Risco</button>
                 <button onclick="toggleMunLayer('logistics')" id="mun-lyr-log2" class="lyr-btn" style="background:rgba(5,14,26,.88);font-size:9px;padding:3px 8px;">→ Logística</button>
+                <button onclick="const on=!this.classList.contains('active');this.classList.toggle('active',on);toggleAdminBoundaryGroup('municipal-states',on);" class="lyr-btn active" style="background:rgba(5,14,26,.88);font-size:9px;padding:3px 8px;">▧ Divisas reais</button>
               </div>
               <!-- TIME SLIDER OVERLAY -->
               <div style="position:absolute;bottom:52px;right:8px;z-index:1000;background:rgba(5,14,26,.92);border:1px solid var(--border);border-radius:6px;padding:6px 10px;min-width:230px;">
@@ -3505,6 +3520,116 @@ function pushFeedEvent() {
 setInterval(pushFeedEvent, 2500);
 pushFeedEvent(); pushFeedEvent(); pushFeedEvent(); pushFeedEvent(); pushFeedEvent();
 
+
+
+// ═══════════════════════════════════════════════════════════════════
+// MAPAS — contornos administrativos reais (países e estados/províncias)
+// Fontes em tempo de execução: geoBoundaries e OpenStreetMap/CARTO.
+// Se a rede falhar, o sistema mantém as camadas produtivas locais.
+// ═══════════════════════════════════════════════════════════════════
+const ADMIN_BOUNDARY = {
+  southAmerica: ['BRA','ARG','CHL','URY','PRY','BOL','PER','COL','ECU','VEN','GUY','SUR','GUF'],
+  northAmerica: ['USA','CAN','MEX'],
+  cache: {},
+  layers: {}
+};
+
+function adminBoundaryStyle(kind='country') {
+  if (kind === 'state') {
+    return { color:'#ffdf6b', weight:0.75, opacity:0.92, fillOpacity:0, dashArray:'2,4', interactive:false };
+  }
+  return { color:'#00d4ff', weight:1.7, opacity:0.98, fillOpacity:0.018, fillColor:'#00d4ff', interactive:false };
+}
+
+function adminBoundaryName(feature) {
+  const p = feature && feature.properties ? feature.properties : {};
+  return p.shapeName || p.name || p.NAME || p.admin || p.ADMIN || p.nome || p.NOME || p.uf || p.UF || p.sigla || 'divisa administrativa';
+}
+
+async function fetchGeoJSON(url) {
+  if (ADMIN_BOUNDARY.cache[url]) return ADMIN_BOUNDARY.cache[url];
+  const res = await fetch(url, { cache:'force-cache' });
+  if (!res.ok) throw new Error('GeoJSON indisponível: ' + url);
+  const data = await res.json();
+  ADMIN_BOUNDARY.cache[url] = data;
+  return data;
+}
+
+async function fetchGeoBoundaries(iso3, adm='ADM1') {
+  const metaUrl = `https://www.geoboundaries.org/api/current/gbOpen/${iso3}/${adm}/`;
+  const meta = await fetchGeoJSON(metaUrl);
+  const gjUrl = meta && (meta.gjDownloadURL || meta.simplifiedGeometryGeoJSON || meta.geoJSON);
+  if (!gjUrl) throw new Error('Metadados geoBoundaries sem GeoJSON: ' + iso3 + '/' + adm);
+  return fetchGeoJSON(gjUrl);
+}
+
+function addBoundaryLayerToMap(map, groupKey, geojson, kind='country', label='') {
+  if (!map || !geojson || !window.L) return null;
+  const layer = L.geoJSON(geojson, {
+    style: () => adminBoundaryStyle(kind),
+    onEachFeature: (feature, lyr) => {
+      const nm = adminBoundaryName(feature);
+      lyr.bindTooltip(`${kind === 'state' ? 'Estado/Província' : 'País'}: ${nm}`, {
+        sticky:true,
+        direction:'top',
+        className:'admin-boundary-tooltip'
+      });
+    }
+  });
+  layer.__boundaryLabel = label;
+  if (!ADMIN_BOUNDARY.layers[groupKey]) ADMIN_BOUNDARY.layers[groupKey] = [];
+  ADMIN_BOUNDARY.layers[groupKey].push(layer);
+  layer.addTo(map);
+  return layer;
+}
+
+async function addCountryContours(map, groupKey, isoList) {
+  const group = L.layerGroup().addTo(map);
+  ADMIN_BOUNDARY.layers[groupKey] = ADMIN_BOUNDARY.layers[groupKey] || [];
+  ADMIN_BOUNDARY.layers[groupKey].push(group);
+  for (const iso of isoList) {
+    try {
+      const gj = await fetchGeoBoundaries(iso, 'ADM0');
+      L.geoJSON(gj, {
+        style: () => adminBoundaryStyle('country'),
+        onEachFeature: (feature, lyr) => lyr.bindTooltip(`País: ${adminBoundaryName(feature)}`, {sticky:true, className:'admin-boundary-tooltip'})
+      }).addTo(group);
+    } catch(e) { console.warn('contorno país falhou', iso, e); }
+  }
+  return group;
+}
+
+async function addStateContours(map, groupKey, isoList) {
+  const group = L.layerGroup().addTo(map);
+  ADMIN_BOUNDARY.layers[groupKey] = ADMIN_BOUNDARY.layers[groupKey] || [];
+  ADMIN_BOUNDARY.layers[groupKey].push(group);
+  for (const iso of isoList) {
+    try {
+      const gj = await fetchGeoBoundaries(iso, 'ADM1');
+      L.geoJSON(gj, {
+        style: () => adminBoundaryStyle('state'),
+        onEachFeature: (feature, lyr) => lyr.bindTooltip(`${iso} · ${adminBoundaryName(feature)}`, {sticky:true, className:'admin-boundary-tooltip'})
+      }).addTo(group);
+    } catch(e) { console.warn('contorno estadual/provincial falhou', iso, e); }
+  }
+  return group;
+}
+
+function toggleAdminBoundaryGroup(groupKey, visible) {
+  const arr = ADMIN_BOUNDARY.layers[groupKey] || [];
+  arr.forEach(layer => {
+    const map = groupKey.startsWith('municipal') ? munMap : groupKey.startsWith('predictx') ? (window.PredictXLive && PredictXLive.map) : leafletMap;
+    if (!map || !layer) return;
+    if (visible && !map.hasLayer(layer)) layer.addTo(map);
+    if (!visible && map.hasLayer(layer)) map.removeLayer(layer);
+  });
+}
+
+function setBoundaryStatus(elId, msg, ok=true) {
+  const el = document.getElementById(elId);
+  if (el) { el.textContent = msg; el.style.color = ok ? 'var(--accent2)' : 'var(--warn)'; }
+}
+
 // ═══════════════════════════════════════════════════════════════════
 // MAP
 // ═══════════════════════════════════════════════════════════════════
@@ -3514,6 +3639,8 @@ function initMap() {
   window._mapInit = true;
   leafletMap = L.map('map', { center: [-10, -60], zoom: 3, zoomControl: true });
   L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution: '© CartoDB', maxZoom: 18 }).addTo(leafletMap);
+  addCountryContours(leafletMap, 'main-countries-real', ADMIN_BOUNDARY.southAmerica).then(() => setBoundaryStatus('main-boundary-status','países reais carregados',true)).catch(() => setBoundaryStatus('main-boundary-status','países: fallback local',false));
+  addStateContours(leafletMap, 'main-states', ADMIN_BOUNDARY.southAmerica).then(() => setBoundaryStatus('main-boundary-status','países + estados/províncias reais ativos',true)).catch(() => setBoundaryStatus('main-boundary-status','estados/províncias: fonte externa indisponível',false));
 
   // ── CONTORNOS DOS PAÍSES DA AMÉRICA DO SUL ──
   const southAmericaCountries = [
@@ -5832,6 +5959,9 @@ function initMunicipal() {
   munMap = L.map('map-municipal', { center: [-10, -60], zoom: 3, zoomControl: true });
   L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
     { attribution:'© CartoDB', maxZoom:18 }).addTo(munMap);
+
+  addCountryContours(munMap, 'municipal-countries-real', ADMIN_BOUNDARY.southAmerica).catch(e => console.warn('municipal countries', e));
+  addStateContours(munMap, 'municipal-states', ADMIN_BOUNDARY.southAmerica).catch(e => console.warn('municipal states', e));
 
   munLayerGroup = L.layerGroup().addTo(munMap);
   // Local DB polygons as supplementary layer (detailed pins)
@@ -10913,6 +11043,8 @@ window.PredictXLive = {
     if(!window.L){ el.innerHTML='<div style="padding:30px;color:#8eeaff;font-family:monospace">Leaflet não carregado.</div>'; return; }
     this.map=L.map(el,{zoomControl:true,attributionControl:false}).setView([29,-96],3);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:12}).addTo(this.map);
+    addCountryContours(this.map, 'predictx-countries-real', ADMIN_BOUNDARY.northAmerica).catch(e => console.warn('predictx countries', e));
+    addStateContours(this.map, 'predictx-states', ADMIN_BOUNDARY.northAmerica).catch(e => console.warn('predictx states', e));
   },
   markerIcon(score){
     const color = score>=82 ? '#ff4d6d' : score>=70 ? '#ffd166' : '#00d4ff';
