@@ -12,7 +12,7 @@ from typing import Any
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 REGISTRY = os.path.join(os.path.dirname(__file__), "trusted_source_registry.json")
-DB_CANDIDATES = [os.path.join(ROOT, "nia_flv.db"), os.path.join(ROOT, "flv", "nia_flv.db")]
+DB_CANDIDATES = [os.environ.get('NIAS_DB_PATH'), os.path.join(ROOT, 'data', 'nia_flv.db'), os.path.join(ROOT, 'nia_flv.db'), os.path.join(ROOT, 'flv', 'nia_flv.db')]
 
 CORE_TABS = [
     {"id":"overview", "label":"Visão Geral", "status":"keep", "reason":"painel executivo"},
@@ -44,7 +44,7 @@ def _load_registry() -> dict[str, Any]:
 
 def _db_path() -> str | None:
     for p in DB_CANDIDATES:
-        if os.path.exists(p): return p
+        if p and os.path.exists(p) and os.path.getsize(p) > 8192: return p
     return None
 
 def _query(conn: sqlite3.Connection, sql: str, args: tuple = ()) -> list[dict[str, Any]]:
