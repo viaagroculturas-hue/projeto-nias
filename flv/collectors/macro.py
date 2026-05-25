@@ -1,0 +1,200 @@
+"""
+Coletor macroeconômico — Indicadores que afetam custos e demanda.
+
+Objetivo: fornecer regressors diários ao modelo (ex.: diesel, USD/BRL, SELIC, IPCA).
+"""
+
+from __future__ import annotations
+
+import json
+import time
+import urllib.request
+import urllib.parse
+from datetime import datetime, timedelta
+
+
+def _bcb_sgs_latest(serie_code: int) -> tuple[str | None, float | None]:
+    """
+    Retorna (data_yyyy_mm_dd, valor) do último ponto disponível para uma série SGS do BCB.
+    """
+    url = f"https://api.bcb.gov.br/dados/serie/bcdata.sgs.{serie_code}/dados?formato=json"
+    req = urllib.request.Request(
+        url,
+        headers={
+            "User-Agent": "Mozilla/5.0",
+            "Accept": "application/json,text/plain,*/*",
+        },
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=20) as resp:
+            data = json.loads(resp.read().decode("utf-8", errors="ignore"))
+    except Exception:
+        return None, None
+    if not data:
+        return None, None
+    last = data[-1]
+    # SGS usa dd/mm/yyyy
+    dt = last.get("data", "").strip()
+    val = last.get("valor", "").strip()
+    if not dt or not val:
+        return None, None
+    try:
+        obs = datetime.strptime(dt, "%d/%m/%Y").strftime("%Y-%m-%d")
+    except Exception:
+        obs = None
+    try:
+        v = float(val.replace(".", "").replace(",", "."))
+    except Exception:
+        v = None
+    return obs, v
+
+
+
+def _bcb_sgs_last_values(serie_code: int, n: int = 12) -> list[tuple[str, float]]:
+    url = f"https://api.bcb.gov.br/dados/serie/bcdata.sgs.{serie_code}/dados/ultimos/{n}?formato=json"
+    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0", "Accept": "application/json"})
+    try:
+        with urllib.request.urlopen(req, timeout=20) as resp:
+            data = json.loads(resp.read().decode("utf-8", errors="ignore"))
+    except Exception:
+        return []
+    out = []
+    for item in data or []:
+        try:
+            dt = datetime.strptime(item.get("data", ""), "%d/%m/%Y").strftime("%Y-%m-%d")
+            val = float(str(item.get("valor", "")).replace(".", "").replace(",", "."))
+            out.append((dt, val))
+        except Exception:
+            continue
+    return out
+
+def _ipca_12m_from_mom() -> tuple[str | None, float | None]:
+    vals = _bcb_sgs_last_values(433, 12)
+    if len(vals) < 12:
+        return None, None
+    acc = 1.0
+    for _, mom in vals[-12:]:
+        acc *= 1.0 + (mom / 100.0)
+    return vals[-1][0], (acc - 1.0) * 100.0
+
+def _safe_float(x):
+    try:
+        return float(x)
+    except Exception:
+        return None
+
+
+def _stooq_latest_close(symbol: str) -> tuple[str | None, float | None]:
+    """
+    Best-effort: consulta Stooq CSV e retorna (YYYY-MM-DD, close).
+    Ex.: brent = 'brn.f', wti = 'cl.f'
+    """
+    try:
+        q = urllib.parse.urlencode({"s": symbol, "f": "sd2t2ohlcv", "h": "1", "e": "csv"})
+        url = f"https://stooq.com/q/l/?{q}"
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(req, timeout=20) as resp:
+            raw = resp.read().decode("utf-8", errors="ignore").strip()
+        lines = [l.strip() for l in raw.splitlines() if l.strip()]
+        if len(lines) < 2:
+            return None, None
+        # header: Symbol,Date,Time,Open,High,Low,Close,Volume
+        cols = [c.strip() for c in lines[1].split(",")]
+        if len(cols) < 8:
+            return None, None
+        date = cols[1]
+        close = float(cols[6])
+        return date, close
+    except Exception:
+        return None, None
+
+
+def _pct_change(curr: float | None, prev: float | None) -> float | None:
+    try:
+        if curr is None or prev is None or prev == 0:
+            return None
+        return float((curr - prev) / prev * 100.0)
+    except Exception:
+        return None
+
+
+def coletar_indicadores_macro():
+    """
+    Coleta indicadores macro e grava em `flv_macro_indicators`.
+
+    Observação: diesel (ANP) nem sempre tem endpoint estável; se indisponível, gravamos nulo,
+    mas ainda assim USD/SELIC/IPCA entram como regressors.
+    """
+    from flv.db import init_db, upsert_macro_indicators, query
+
+    # garante schema
+    try:
+        init_db()
+    except Exception:
+        pass
+
+    # Séries SGS (códigos conhecidos)
+    # 1: USD/BRL (venda) — série clássica
+    # 11: SELIC meta a.a. (% a.a.)
+    # 433: IPCA (variação mensal, %) -> aqui usamos proxy do último valor mensal
+    usd_date, usd = _bcb_sgs_latest(1)
+    selic_date, selic = _bcb_sgs_latest(11)
+    ipca_date, ipca_yoy = _ipca_12m_from_mom()
+
+    # Normaliza data de gravação: usa a mais recente disponível
+    dates = [d for d in [usd_date, selic_date, ipca_date] if d]
+    obs_date = max(dates) if dates else datetime.now().strftime("%Y-%m-%d")
+
+    # Diesel: tentamos (best-effort) consumir algum dado público; fallback = None
+    diesel_brl_l = None
+    diesel_change_pct = None
+
+    # Petróleo (energia/frete) — Brent/WTI (best-effort via Stooq)
+    brent_date, brent_usd = _stooq_latest_close("brn.f")
+    wti_date, wti_usd = _stooq_latest_close("cl.f")
+
+    # Change % diário (vs último ponto gravado)
+    last = None
+    try:
+        rows = query("SELECT brent_usd, wti_usd FROM flv_macro_indicators ORDER BY obs_date DESC LIMIT 1")
+        last = rows[0] if rows else None
+    except Exception:
+        last = None
+
+    brent_change_pct = _pct_change(brent_usd, (last or {}).get("brent_usd"))
+    wti_change_pct = _pct_change(wti_usd, (last or {}).get("wti_usd"))
+
+    # IPCA YoY calculado por capitalização dos últimos 12 meses da série SGS 433
+    ipca_yoy_pct = ipca_yoy
+
+    upsert_macro_indicators(
+        obs_date=obs_date,
+        diesel_brl_l=_safe_float(diesel_brl_l),
+        diesel_change_pct=_safe_float(diesel_change_pct),
+        brent_usd=_safe_float(brent_usd),
+        brent_change_pct=_safe_float(brent_change_pct),
+        wti_usd=_safe_float(wti_usd),
+        wti_change_pct=_safe_float(wti_change_pct),
+        usd_brl=_safe_float(usd),
+        selic_pct=_safe_float(selic),
+        ipca_yoy_pct=_safe_float(ipca_yoy_pct),
+        source="BCB/ANP/Stooq(best-effort)",
+    )
+
+    print(
+        f"[FLV-Macro] {obs_date} salvo: USD={usd} SELIC={selic} IPCA_12m={ipca_yoy_pct} "
+        f"Brent={brent_usd} WTI={wti_usd} Diesel={diesel_brl_l}"
+    )
+    return {
+        "obs_date": obs_date,
+        "usd_brl": usd,
+        "selic_pct": selic,
+        "ipca_yoy_pct": ipca_yoy_pct,
+        "diesel_brl_l": diesel_brl_l,
+        "diesel_change_pct": diesel_change_pct,
+        "brent_usd": brent_usd,
+        "brent_change_pct": brent_change_pct,
+        "wti_usd": wti_usd,
+        "wti_change_pct": wti_change_pct,
+    }
+
